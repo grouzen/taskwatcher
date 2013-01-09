@@ -33,11 +33,38 @@ package Local::Taskwatcher::Task;
     {
         my ($class, $doc, $name) = @_;
         
-        return undef if !defined($name) || !defined($doc) || !defined($doc->{tasks}->{$name});
+        return undef if !defined($name) || !defined($doc);
         
-        my $self = { doc => $doc, name => $name, task => $doc->{tasks}->{$name} };
+        my $self = {};
+        bless($self, $class);
 
-        return bless($self, $class);
+        $self->{doc} = $doc;
+        $self->{name} = $name;
+
+        my $task = $self->find_task($doc, $name);
+        
+        return undef if !defined($task);
+        
+        $self->{task} = $task;
+
+        return $self;
+    }
+
+    sub find_task
+    {
+        my ($self, $doc, $name) = @_;
+        
+        my $task = undef;
+        my @tree = split(/\./, $name);
+        
+        $task = $doc;
+
+        for(my $i = 0; $i <= $#tree; $i++) {
+            $task = $task->{tasks}->{$tree[$i]};
+            return undef if !defined($task);
+        }
+
+        return $task;
     }
 
     sub delta_time
@@ -74,6 +101,13 @@ package Local::Taskwatcher::Task;
         my ($self) = @_;
 
         return $self->{task}->{create_time};
+    }
+
+    sub get_descr
+    {
+        my ($self) = @_;
+
+        return $self->{task}->{descr};
     }
 
 }

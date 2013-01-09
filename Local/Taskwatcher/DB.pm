@@ -131,16 +131,37 @@ package Local::Taskwatcher::DB;
         return $self;
     }
 
-    sub print_status
+    sub status
     {
         my ($self, $taskname) = @_;
         my $task = $self->get_task($taskname);
         
         if(defined($task)) {
             print $self->{printer}->p($self->{printer}->human_time($task->delta_time()), SUCCESS) . "\n";
+        } else {
+            print $self->{printer}->p("Task not found: $taskname\n");
         }
 
         return $self;
+    }
+
+    sub tasks_list
+    {
+        my ($self) = @_;
+        my $tasks = $self->{doc}->{tasks};
+
+        print $self->{printer}->p("Tasks:\n");
+
+        foreach my $taskname (keys(%{$tasks})) {
+            my $task = $self->get_task($taskname);
+            
+            print $self->{printer}->p($taskname);
+            print $self->{printer}->p(" (" . $task->get_descr . ")") if defined($task->get_descr);
+            print "\n";
+
+            print $self->{printer}->p("  spent time: " . $self->{printer}->p($self->{printer}->human_time($task->delta_time)) . "\n");
+            
+        }
     }
 
 }

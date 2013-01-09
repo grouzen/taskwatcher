@@ -54,7 +54,7 @@ use Local::Taskwatcher::Printer qw(INFO SUCCESS ERROR);
 #             hashkeyofcommit:
 #                create_time: 123123123
 #                spended_time: 12312
-#         subtasks:
+#         tasks:
 #              -/same info as on parent task/-
 #      task2:
 #         ...
@@ -78,7 +78,8 @@ GetOptions("help|usage" => sub { pod2usage(-verbose => 2, -exitval => 0) },
            "description=s" => \$options->{description},
            "run=s" => \$options->{run},
            "stop=s" => \$options->{stop},
-           "status=s" => \$options->{status}
+           "status=s" => \$options->{status},
+           "tasks-list" => \$options->{tasks_list}
     );
 
 my $printer = Local::Taskwatcher::Printer->new($options->{verbose});
@@ -86,7 +87,10 @@ my $db = Local::Taskwatcher::DB->new($dbfilename, $printer);
 return if !defined($db->open());
 
 if($options->{status}) {
-    $db->print_status($options->{status});
+    $db->status($options->{status});
+    exit 0;
+} elsif($options->{tasks_list}) {
+    $db->tasks_list();
     exit 0;
 }
 
