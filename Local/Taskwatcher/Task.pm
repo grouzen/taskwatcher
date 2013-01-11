@@ -50,10 +50,55 @@ package Local::Taskwatcher::Task;
         return $self;
     }
 
+    sub tasks_chain
+    {
+        my ($self, $name) = @_;
+
+        my @tree = split(/\./, $name);
+        my @chain;
+        
+        for(my $i = 0; $i < $#tree + 1; $i++) {
+            $chain[$i] = $tree[$i];
+        }
+
+        return @chain;
+    }
+
+    sub parent_path
+    { 
+        my ($self, @chain) = @_;
+
+        my $path = '';
+        
+        if($#chain > 0) {
+            $path = $chain[0];
+            for(my $i = 1; $i < $#chain; $i++) {
+                $path .= '.' . $chain[$i];
+            }
+        }
+
+        return $path;
+    }
+
+    sub is_root
+    {
+        my ($self) = @_;
+
+        return (defined($self->{current}) ? 1 : 0);
+    }
+
+    sub find_parent
+    {
+        my ($self) = @_;
+    }
+
     sub find_task
     {
         my ($self, $doc, $name) = @_;
         
+        # TODO: remove
+        return $doc if $name eq '';
+
         my $task = undef;
         my @tree = split(/\./, $name);
         
@@ -65,6 +110,20 @@ package Local::Taskwatcher::Task;
         }
 
         return $task;
+    }
+    
+    sub create_subtask
+    {
+        my ($self, $name) = @_;
+        
+        $self->{task}->{tasks}->{$name} = {
+            time => time(),
+            create_time => time(),
+            done => 0,
+            tasks => undef
+        };
+
+        return $self;
     }
 
     sub delta_time
@@ -108,6 +167,13 @@ package Local::Taskwatcher::Task;
         my ($self) = @_;
 
         return $self->{task}->{descr};
+    }
+
+    sub set_descr
+    {
+        my ($self, $descr) = @_;
+
+        $self->{task}->{descr} = $descr;
     }
 
 }

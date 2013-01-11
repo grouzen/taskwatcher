@@ -65,32 +65,43 @@ my $dbfilename = $ENV{HOME} . "/.taskwatcher.db";
 my $lockfile = File::Lockfile->new("taskwatcher.pid", '/tmp');
 
 my $options = {
-    descrption => '',
+    #descr => '',
     verbose => 0
 };
 
 # Launch program.
 GetOptions("help|usage" => sub { pod2usage(-verbose => 2, -exitval => 0) },
-           "verbose" => \$options->{verbose},
-           "add|create=s" => \$options->{add},
-           "remove|delete=s" => \$options->{remove},
-           "edit=s" => \$options->{edit},
-           "description=s" => \$options->{description},
-           "run=s" => \$options->{run},
-           "stop=s" => \$options->{stop},
-           "status=s" => \$options->{status},
-           "tasks-list" => \$options->{tasks_list}
+           "v|verbose" => \$options->{verbose},
+           "a|add" => \$options->{add},
+           "d|delete" => \$options->{remove},
+           "descr=s" => \$options->{descr},
+           "r|run" => \$options->{run},
+           "s|status" => \$options->{status},
+           "l|tasks-list" => \$options->{tasks_list},
+           "c|commit" => \$options->{commit}
     );
+
+my $taskname = $ARGV[0];
 
 my $printer = Local::Taskwatcher::Printer->new($options->{verbose});
 my $db = Local::Taskwatcher::DB->new($dbfilename, $printer);
 return if !defined($db->open());
 
-if($options->{status}) {
-    $db->status($options->{status});
-    exit 0;
-} elsif($options->{tasks_list}) {
+if($options->{tasks_list}) {
     $db->tasks_list();
+    exit 0;
+}
+
+if(!defined($taskname)) {
+    print $printer->p("taskname is not defined, see help(-h).\n");
+    exit 1;
+}
+
+if($options->{status}) {
+    $db->status($taskname);
+    exit 0;
+} elsif($options->{descr}) {
+    $db->set_descr($taskname, $options->{descr});
     exit 0;
 }
 
@@ -102,11 +113,11 @@ if(my $pid = $lockfile->check()) {
 $lockfile->write;
 
 if($options->{add}) {
-    $db->add_task($options->{add}, $options->{description});
+    $db->add_task($taskname, $options->{descr});
 } elsif($options->{remove}) {
-    $db->remove_task($options->{remove});
+    $db->remove_task($taskname);
 } elsif($options->{run}) {
-    my $task = $db->get_task($options->{run});
+    my $task = $db->get_task($taskname);
 
     if(defined($task)) {
         my $ticks = 0;
@@ -124,7 +135,7 @@ if($options->{add}) {
             }
         }
     } else {
-        print "Task not found: $options->{run}\n";
+        print "Task not found: $taskname\n";
     }
 }
 
@@ -138,16 +149,18 @@ TaskWatcher
 
 =head1 SYNOPSIS
 
-taskwatcher [options]
+taskwatcher [options] [taskname]
+
+taskname format: foo.bar.baz(bar is a child of foo).
 
 Options:
     -h, --help, --usage                     Show this message.
-    -a, --add, --create=taskname            Create task with a taskname.
-    -r, --remove, --delete=taskname         Remove task with a taskname.
-    -e, --edit=taskname                     Edit a taskname.
-    -d, --description=description           Set a description of task.
-    -r, --run=taskname                      Run existing taskname.
-    -s, --stop=taskname                     Stop existing taskname.
+    -a, --add                               Create task with a name=taskname
+    -d, --delete                            Remove task.
+        --descr=descr                       Set a description of the task.
+    -r, --run                               Run task.
+    -s, --status                            Print status of the task.
+    -l, --list-tasks                        Show all tasks.
     -v, --verbose                           Write more.
     
 =cut

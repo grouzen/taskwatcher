@@ -34,6 +34,8 @@ package Local::Taskwatcher::DB;
     use Local::Taskwatcher::Task;
     use Local::Taskwatcher::Commit;
     use Local::Taskwatcher::Printer qw(INFO SUCCESS ERROR);
+    
+    use Data::Dumper;
 
     use constant {
         UPDATE_INTERVAL => 5
@@ -106,7 +108,24 @@ package Local::Taskwatcher::DB;
         return undef if !defined($task);
         return $task;
     }
+    
+    sub set_descr
+    { 
+        my ($self, $taskname, $descr) = @_;
 
+        my $task = $self->get_task($taskname);
+        if(defined($task)) {
+            $task->set_descr($descr);
+        
+            $self->write();
+            print $self->{printer}->p("Description changed for task: $taskname\n");
+        } else {
+            print $self->{printer}->p("Task not found: $taskname\n");
+        }
+        
+        return $self;
+    }
+    
     sub add_task
     {
         my ($self, $taskname, $taskdescr) = @_;
@@ -114,16 +133,18 @@ package Local::Taskwatcher::DB;
         my $task = $self->get_task($taskname);
 
         if(!defined($task)) {
-            $self->{doc}->{tasks}->{$taskname} = {
-                descr => $taskdescr,
-                time => time(),
-                create_time => time(),
-                done => 0
-            };
-
-            print $self->{printer}->p("Add task: $taskname\n");
+            my @chain = Local::Taskwatcher::Task->tasks_chain($taskname);
+            my $parentname = Local::Taskwatcher::Task->parent_path(@chain);
             
-            $self->write();
+            $task = $self->get_task($parentname);
+            if(defined($task)) {
+                $task->create_subtask($chain[$#chain]);
+                $self->get_task($taskname)->set_descr($taskdescr);
+                print $self->{printer}->p("Add task: $taskname\n");
+                $self->write();
+            } else {
+                print $self->{printer}->p("Couldn't add subtask to: $parentname: parent doesn't exists\n");
+            }
         } else {
             print $self->{printer}->p("Task is already exists: $taskname\n");
         }
@@ -155,11 +176,13 @@ package Local::Taskwatcher::DB;
         foreach my $taskname (keys(%{$tasks})) {
             my $task = $self->get_task($taskname);
             
-            print $self->{printer}->p($taskname);
-            print $self->{printer}->p(" (" . $task->get_descr . ")") if defined($task->get_descr);
-            print "\n";
+            print $self->{printer}->p($taskname . "\n");
 
-            print $self->{printer}->p("  spent time: " . $self->{printer}->p($self->{printer}->human_time($task->delta_time)) . "\n");
+            if(defined($task->get_descr)) {
+                print $self->{printer}->p("  description: " . $task->get_descr . "\n");
+            }
+
+            print $self->{printer}->p("  time: " . $self->{printer}->p($self->{printer}->human_time($task->delta_time)) . "\n");
             
         }
     }
