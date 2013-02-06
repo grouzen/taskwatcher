@@ -175,7 +175,13 @@ package Local::Taskwatcher::Task;
 
         $self->{task}->{descr} = $descr;
     }
+ 
+    sub get_subtasks
+    {
+        my ($self) = @_;
 
+        return $self->{task}->{tasks};
+    }
 }
 
 1;

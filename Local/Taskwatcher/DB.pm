@@ -120,7 +120,7 @@ package Local::Taskwatcher::DB;
             $self->write();
             print $self->{printer}->p("Description changed for task: $taskname\n");
         } else {
-            print $self->{printer}->p("Task not found: $taskname\n");
+            print $self->{printer}->p("Set description: Task not found: $taskname\n");
         }
         
         return $self;
@@ -139,9 +139,11 @@ package Local::Taskwatcher::DB;
             $task = $self->get_task($parentname);
             if(defined($task)) {
                 $task->create_subtask($chain[$#chain]);
-                $self->get_task($taskname)->set_descr($taskdescr);
-                print $self->{printer}->p("Add task: $taskname\n");
                 $self->write();
+
+                $self->set_descr($taskname, $taskdescr);
+
+                print $self->{printer}->p("Add task: $taskname\n");
             } else {
                 print $self->{printer}->p("Couldn't add subtask to: $parentname: parent doesn't exists\n");
             }
@@ -168,13 +170,24 @@ package Local::Taskwatcher::DB;
 
     sub tasks_list
     {
-        my ($self) = @_;
-        my $tasks = $self->{doc}->{tasks};
+        my ($self, $target_task) = @_;
+        
+        my $root_task;
+        my $task_path = '';
+
+        if(!defined($target_task)) {
+            $root_task = $self->get_task('');
+        } else {
+            $root_task = $self->get_task($target_task);
+            $task_path = $target_task . '.';
+        }
+
+        my $tasks = $root_task->get_subtasks();
 
         print $self->{printer}->p("Tasks:\n");
 
         foreach my $taskname (keys(%{$tasks})) {
-            my $task = $self->get_task($taskname);
+            my $task = $self->get_task($task_path . $taskname);
             
             print $self->{printer}->p($taskname . "\n");
 
@@ -183,7 +196,21 @@ package Local::Taskwatcher::DB;
             }
 
             print $self->{printer}->p("  time: " . $self->{printer}->p($self->{printer}->human_time($task->delta_time)) . "\n");
+
+            my $subtasks = $task->get_subtasks();
             
+            if(scalar keys(%{$subtasks}) > 0) {
+                print "  subtasks: \n";
+                for my $subtask (keys(%{$subtasks})) {
+                    my $t = $self->get_task($task_path . $taskname . '.' . $subtask);
+
+                    print $self->{printer}->p("    $subtask:\n");
+                    print $self->{printer}->p("        time: " . $self->{printer}->p($self->{printer}->human_time($t->delta_time)) . "\n");
+                    if(defined($t->get_descr)) {
+                        print $self->{printer}->p("        description: " . $t->get_descr . "\n");
+                    }
+                }
+            }
         }
     }
 
